@@ -123,7 +123,6 @@ namespace GreatClock.Common.ExcelToSO
             content.AppendLine();
             content.AppendLine("using System;");
             content.AppendLine("using UnityEngine;");
-            content.AppendLine("using Newtonsoft.Json;");
             bool usingCollections = false;
             if (settings.use_public_items_getter)
             {
@@ -152,7 +151,7 @@ namespace GreatClock.Common.ExcelToSO
             }
 
             var baseclasss = string.IsNullOrEmpty(settings.base_class) ? "ScriptableObject" : settings.base_class;
-            content.AppendLine(string.Format("{0}public partial class {1} : {2} {{", indent, className,baseclasss));
+            content.AppendLine(string.Format("{0}public partial class {1} : {2} {{", indent, className, baseclasss));
             content.AppendLine();
             if (settings.use_hash_string)
             {
@@ -1215,7 +1214,29 @@ namespace GreatClock.Common.ExcelToSO
             }
             EditorUtility.ClearProgressBar();
             so.ApplyModifiedProperties();
+            // 获取目标对象的实例
+            TriggerCallback(so);
             return true;
+        }
+
+        static void TriggerCallback(SerializedObject so)
+        {
+            Type targetType = so.targetObject.GetType();
+            // 获取所有实现的接口
+            Type[] interfaces = targetType.GetInterfaces();
+            foreach (Type interfaceType in interfaces)
+            {
+                // 检查是否实现了特定的接口
+                if (interfaceType.Name == "IConfig")
+                {
+                    MethodInfo methodInfo = interfaceType.GetMethod("OnConfigLoaded");
+                    if (methodInfo != null)
+                    {
+                        // 调用接口方法
+                        methodInfo.Invoke(so.targetObject, null);
+                    }
+                }
+            }
         }
 
         static bool ReadExcel(string excel_path, bool treat_unknown_types_as_enum, List<SheetData> sheets,
@@ -2279,7 +2300,7 @@ namespace GreatClock.Common.ExcelToSO
 
                 if (mSetting.add_custom_attribute)
                 {
-                    mSetting.custom_attribute_name = EditorGUI.TextField(pos, "Custom Attribute Name", mSetting.custom_attribute_name);
+                    mSetting.custom_attribute_name = EditorGUI.TextField(pos, "Field Custom Attribute", mSetting.custom_attribute_name);
                 }
                 pos.y += pos.height + EditorGUIUtility.standardVerticalSpacing;
 
